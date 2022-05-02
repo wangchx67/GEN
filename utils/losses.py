@@ -1,13 +1,7 @@
-import torch
 import torch.nn as nn
-from torch.nn.functional import log_softmax
-from torchvision.models.vgg import vgg16,vgg19
+from torchvision.models.vgg import vgg16
 import torch.nn.functional as F
-import os
 
-from PIL import Image
-import torchvision
-import numpy as np
 
 class perception_loss(nn.Module):
     def __init__(self,device=None):

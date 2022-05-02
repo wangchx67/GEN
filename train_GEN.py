@@ -25,12 +25,9 @@ def train(config):
     optimizer=torch.optim.Adam(enhancer.parameters(), lr=config.lr,
                                                                          weight_decay=config.weight_decay)
 
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
     l_loss = nn.L1Loss().to(device)
     perceptual_loss = perception_loss().to(device)
-    ssim_loss = ssim.SSIM().to(device)
 
-    best_weights = copy.deepcopy(enhancer.state_dict())
     best_epoch_psnr = 0
     best_epoch_ssim = 0
     best_psnr = 0.
@@ -45,31 +42,26 @@ def train(config):
         for iteration, images in loop:
             img = images[0].to(device)
             gt = images[1].to(device)
-            img_path = images[2]
-            gt_path = images[3]
 
             out = enhancer(img)
 
             loss_l = l_loss(out, gt)
             loss_per = perceptual_loss(out, gt) * 0.04
-            # loss_ssim=(1-ssim_loss(out,gt))*0.1
             loss = loss_l + loss_per
 
             optimizer.zero_grad()
 
             loss.backward()
 
-            torch.nn.utils.clip_grad_norm(enhancer.parameters(), config.grad_clip_norm)
+            # torch.nn.utils.clip_grad_norm(enhancer.parameters(), config.grad_clip_norm)
 
             optimizer.step()
             loop.set_description(f'Epoch [{epoch}/{config.num_epochs}]')
             loop.set_postfix(loss=format(loss.item())
                              , loss_l=format(loss_l.item())
                              , loss_per=format(loss_per.item())
-                             # ,loss_ssim=format(loss_ssim.item())
                              )
         enhancer.eval()
-        # lr_scheduler.step()
         epoch_psnr = AverageMeter.AverageMeter()
         epoch_ssim = AverageMeter.AverageMeter()
 
@@ -78,50 +70,46 @@ def train(config):
             img = images[0].to(device)
             gt = images[1].to(device)
             img_path = images[2]
-            gt_path = images[3]
 
             with torch.no_grad():
                 out = enhancer(img)
 
             for i, pt in enumerate(img_path):
                 if os.path.basename(pt) == 'a4512-09-05-19-at-18h43m31s-_MG_9546.jpg':
-                    torchvision.utils.save_image(out[i], "data/temp/GEN/fivek_Epoch" + str(epoch) + ".jpg")
+                    torchvision.utils.save_image(out[i], "data/temp/fivek_Epoch" + str(epoch) + ".jpg")
 
             epoch_psnr.update(psnr.calc_psnr(out, gt))
             epoch_ssim.update(ssim.ssim(out, gt))
 
             loop_.set_description(f'Epoch [{epoch}/{config.num_epochs}]')
             loop_.set_postfix(psnr=format(epoch_psnr.avg), ssim=format(epoch_ssim.avg))
-            # print('eval psnr: {:.2f}'.format(epoch_psnr.avg))
-            # print('eval ssim: {:.4f}'.format(epoch_ssim.avg))
-
         if epoch_ssim.avg > best_ssim:
             best_epoch_ssim = epoch
-        best_ssim = epoch_ssim.avg
+            best_ssim = epoch_ssim.avg
         if epoch_psnr.avg > best_psnr:
             best_epoch_psnr = epoch
-        best_psnr = epoch_psnr.avg
-        best_weights = copy.deepcopy(enhancer.state_dict())
+            best_psnr = epoch_psnr.avg
+            best_weights = copy.deepcopy(enhancer.state_dict())
 
         print('best psnr epoch: {}, psnr: {:.2f}'.format(best_epoch_psnr, best_psnr))
         print('best ssim epoch: {}, ssim: {:.4f}'.format(best_epoch_ssim, best_ssim))
 
-        torch.save(best_weights, os.path.join(config.snapshots_folder + '/GEN/', 'best.pth'))
+        torch.save(best_weights, os.path.join(config.snapshots_folder, 'best.pth'))
 
 if __name__ == "__main__":
     print(torch.cuda.is_available())
     parser = argparse.ArgumentParser()
 
     #  training params
-    parser.add_argument('--lowlight_images_path_fivek', type=str, default="./data/train_data/fivek/train_lowsize/")
-    parser.add_argument('--lowlight_images_path_eval_fivek', type=str, default="./data/train_data/fivek/eval_lowsize/")
-    #parser.add_argument('--lowlight_images_path_fivek', type=str, default="/data/fivek/train_lowsize/")
-    #parser.add_argument('--lowlight_images_path_eval_fivek', type=str, default="/data/fivek/eval_lowsize/")
+    # parser.add_argument('--lowlight_images_path_fivek', type=str, default="./data/train_data/fivek/train_lowsize/")
+    # parser.add_argument('--lowlight_images_path_eval_fivek', type=str, default="./data/train_data/fivek/eval_lowsize/")
+    parser.add_argument('--lowlight_images_path_fivek', type=str, default="/data/fivek/fivek_png/train/")
+    parser.add_argument('--lowlight_images_path_eval_fivek', type=str, default="/data/fivek/fivek_png/eval/")
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--weight_decay', type=float, default=0.)
     parser.add_argument('--grad_clip_norm', type=float, default=0.1)
     parser.add_argument('--num_epochs', type=int, default=200)
-    parser.add_argument('--train_batch_size', type=int, default=8)
+    parser.add_argument('--train_batch_size', type=int, default=16)
     parser.add_argument('--val_batch_size', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=4)
     parser.add_argument('--display_iter', type=int, default=250)

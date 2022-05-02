@@ -1,6 +1,4 @@
 import os
-import sys
-
 import torch
 import torch.utils.data as data
 
@@ -8,7 +6,6 @@ import numpy as np
 from PIL import Image
 import glob
 import random
-import cv2
 from utils.dataset_utils import Augment_RGB_torch
 
 augment = Augment_RGB_torch()
@@ -18,7 +15,7 @@ transforms_aug = [method for method in dir(augment) if callable(getattr(augment,
 def make_dataset(path):  # 读取自己的数据的函数
 
     dataset_list = []
-    dirgt = os.path.join(path, 'expertC_gt')
+    dirgt = os.path.join(path, 'gt')
     dirimg = os.path.join(path, 'input')
 
     for fGT in glob.glob(os.path.join(dirgt, '*.*')):
@@ -45,35 +42,8 @@ class Traindata(data.Dataset):
         img = img.resize((self.size, self.size), Image.ANTIALIAS)
         gt = gt.resize((self.size, self.size), Image.ANTIALIAS)
 
-
-        # long=512
-        # short=341
-        # H_img=img.height
-        # W_img=img.width
-        #
-        # if H_img==long:
-        #     img = img.resize((long, short), Image.ANTIALIAS)
-        #     gt = gt.resize((long, short), Image.ANTIALIAS)
-        # elif W_img==long:
-        #     img = img.resize((short, long), Image.ANTIALIAS).transpose(Image.ROTATE_90)
-        #     gt = gt.resize((short, long), Image.ANTIALIAS).transpose(Image.ROTATE_90)
-
         img = (np.asarray(img)/255.)
         gt = (np.asarray(gt)/255.)
-        #
-        #
-        # #Crop Input and Target
-        # ps = self.size
-        # H = img.shape[0]
-        # W = img.shape[1]
-        # if H-ps==0:
-        #     r=0
-        #     c=0
-        # else:
-        #     r = np.random.randint(0, H - ps)
-        #     c = np.random.randint(0, W - ps)
-        # img = img[r:r + ps, c:c + ps]
-        # gt = gt[r:r + ps, c:c + ps]
 
         img = torch.from_numpy(img).float().permute(2, 0, 1)
         gt = torch.from_numpy(gt).float().permute(2, 0, 1)
