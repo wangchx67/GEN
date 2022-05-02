@@ -12,5 +12,5 @@ Below is my reproducement:
 | method    | psnr  | ssim  |
 | --------- | ----- | ----- |
 | GEN(mine) | 24.40 | 0.913 |
-| GEN       | 25.47 | 0.887 |
+| GEN       | 25.47 | 0.917 |
 
